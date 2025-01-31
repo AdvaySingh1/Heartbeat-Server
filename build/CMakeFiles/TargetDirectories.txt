@@ -1,0 +1,9 @@
+/home/ubuntu/ds3-echoserver/build/CMakeFiles/echoserver.dir
+/home/ubuntu/ds3-echoserver/build/CMakeFiles/client.dir
+/home/ubuntu/ds3-echoserver/build/CMakeFiles/heartbeat.dir
+/home/ubuntu/ds3-echoserver/build/CMakeFiles/edit_cache.dir
+/home/ubuntu/ds3-echoserver/build/CMakeFiles/rebuild_cache.dir
+/home/ubuntu/ds3-echoserver/build/_deps/cxxopts-build/CMakeFiles/edit_cache.dir
+/home/ubuntu/ds3-echoserver/build/_deps/cxxopts-build/CMakeFiles/rebuild_cache.dir
+/home/ubuntu/ds3-echoserver/build/_deps/cxxopts-build/include/CMakeFiles/edit_cache.dir
+/home/ubuntu/ds3-echoserver/build/_deps/cxxopts-build/include/CMakeFiles/rebuild_cache.dir
