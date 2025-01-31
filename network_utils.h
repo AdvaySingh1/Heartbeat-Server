@@ -9,6 +9,7 @@
 const unsigned int MAX_MESSAGE_SIZE = 255; 
 const unsigned int MAX_CLIENTS = 16; // Maximum number of clients that can connect
 const unsigned int DEFAULT_SERVER_PORT = 8888; // Port number to listen on
+const unsigned int DEFAULT_HEARTBEAT = 2; // Default heatbeat seconds
 
 /**
  * Make a server sockaddr given a port.

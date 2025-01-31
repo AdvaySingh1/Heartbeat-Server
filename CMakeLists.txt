@@ -18,6 +18,8 @@ endif()
 
 add_executable(echoserver echoserver.cpp network_utils.cpp) 
 add_executable(client client.cpp network_utils.cpp) 
+add_executable(heartbeat heartbeat.cpp network_utils.cpp) 
 
 target_link_libraries(echoserver cxxopts::cxxopts)
 target_link_libraries(client cxxopts::cxxopts)
+target_link_libraries(heartbeat cxxopts::cxxopts)

@@ -2,7 +2,8 @@
 #include <cstdlib>
 #include <stdio.h>  // printf(), perror()
 #include <stdlib.h> // atoi()
-#include <sys/_types/_ssize_t.h>
+// #include <sys/_types/_ssize_t.h>
+#include <sys/types.h> // changed
 #include <sys/socket.h> // socket(), connect(), send(), recv()
 #include <unistd.h>     // close()
 

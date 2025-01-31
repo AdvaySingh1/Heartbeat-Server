@@ -9,7 +9,7 @@
 #include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO, FD_SETSIZE macros
 #include <sys/types.h>
 #include <unistd.h> //close
-
+#include <chrono>
 #include <cxxopts.hpp>
 #include <iostream>
 #include <string>
@@ -68,21 +68,59 @@ int create_server_listen_socket(int port) {
     return sockfd;
 }
 
-void serve(int listen_sockfd) {
+int connect_to_hearbeat_server(const char *hostname, int port){
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in addr;
+    if (make_client_sockaddr(&addr, hostname, port) == -1) {
+        std::cerr << "Error making client for heartbeat sockaddr" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (connect(sockfd, (sockaddr *)&addr, sizeof(addr)) == -1) {
+        std::cerr << "Error connecting heartbeat stream socket" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::cout << "Connected to server at " << hostname << " on port " << port
+              << std::endl;
+
+    return sockfd;
+}
+
+
+void serve(int listen_sockfd, int heartbeat_sockfd) {
     std::unordered_map<int, int>
         client_socket_to_num_msgs; // map client socket to number of messages
     fd_set readfds;
 
+    timeval tv = {DEFAULT_HEARTBEAT*2, 0};
+    auto prev_heartbeat = std::chrono::high_resolution_clock::now();
+    const auto interval = std::chrono::seconds(DEFAULT_HEARTBEAT*2);
+
     while (true) {
+        // (0) exit if the heartbeat took too long
+        if (std::chrono::high_resolution_clock::now() - prev_heartbeat 
+                > interval) {
+            for (const auto &[client_sockdf, _]: client_socket_to_num_msgs)
+                close(client_sockdf);
+            close(heartbeat_sockfd);
+            close(listen_sockfd);
+            return;
+        }
+
+
+
         // (1) Initialize the set of file descriptors (readfds)
         FD_ZERO(&readfds);               // (1.1) clear the socket set
         FD_SET(listen_sockfd, &readfds); // (1.2) add listen socket to set
+        FD_SET(heartbeat_sockfd, &readfds); // (1.2) add heartbeat socket to set
         for (const auto &[client_sockfd, _] : client_socket_to_num_msgs) {
             FD_SET(client_sockfd, &readfds); // (1.3) add client socket to set
         }
-
         // (2) Wait for activity on any of the sockets with no timeout
-        if (select(FD_SETSIZE, &readfds, nullptr, nullptr, nullptr) < 0 &&
+        // in this case, we set a timeval for the heartbeat
+        if (select(FD_SETSIZE, &readfds, nullptr, nullptr, &tv) < 0 &&
             errno != EINTR) {
             std::cerr << "select() failed with error " << strerror(errno)
                       << std::endl;
@@ -147,6 +185,15 @@ void serve(int listen_sockfd) {
                 ++it;
             }
         }
+        // (5) monitor heartbeat
+        if (FD_ISSET(heartbeat_sockfd, &readfds)) {
+            char heartbeat;
+            ssize_t h_size = recv(heartbeat_sockfd, &heartbeat, sizeof('a'), MSG_WAITALL);
+            if (h_size) {
+                prev_heartbeat = std::chrono::high_resolution_clock::now();
+                std::cout << "got a message" << std::endl;
+            }
+        }
     }
 }
 
@@ -155,13 +202,21 @@ int main(int argc, char *argv[]) {
     cxxopts::Options options("Echo Server", "An echo server");
     options.add_options()("p,port", "Port number",
                           cxxopts::value<int>()->default_value(
-                              std::to_string(DEFAULT_SERVER_PORT)));
+                              std::to_string(DEFAULT_SERVER_PORT)))
+                         ("h,hostname", "Remote hostname of the heartbeat",
+        cxxopts::value<std::string>()->default_value("localhost"))
+                        ("s,heartbeatport", "Remote port of the heartbeat",
+                        cxxopts::value<int>()->default_value(
+                            std::to_string(DEFAULT_SERVER_PORT)));
 
     // parse command line arguments
     auto result = options.parse(argc, argv);
     int port = result["port"].as<int>();
+    int hport = result["heartbeatport"].as<int>();
+    const char *hostname = result["hostname"].as<std::string>().c_str();
 
     int sockfd = create_server_listen_socket(port); // create server socket
-    serve(sockfd);                                  // serve clients
+    int hdf = connect_to_hearbeat_server(hostname, hport); // connect the heartbeat
+    serve(sockfd, hdf);                                  // serve clients
     return 0;
 }
